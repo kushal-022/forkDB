@@ -12,13 +12,16 @@
 
 using namespace std;
 
+//Constructor
 Interpreter::Interpreter() : sql_type_(-1) {
   string p = string(getenv("HOME")) + "/MiniDBData/";
   api = new MiniDBAPI(p);
 }
 
+//Destructor
 Interpreter::~Interpreter() { delete api; }
 
+//Tokeninizing the inputted SQL Query
 vector<string> split(string str, string sep) {
   char *cstr = const_cast<char *>(str.c_str());
   char *current;
@@ -31,6 +34,7 @@ vector<string> split(string str, string sep) {
   return arr;
 }
 
+//Cleaning the SQL Statement inputted from the user and tokenizing it on the basis of plain spaces.
 void Interpreter::FormatSQL() {
   // remove newlines, tabs
   boost::regex reg("[\r\n\t]");

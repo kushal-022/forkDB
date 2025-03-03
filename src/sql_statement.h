@@ -19,6 +19,8 @@ private:
   int length_;
 
 public:
+    
+// parameterized constructor
   TKey(int keytype, int length) {
     key_type_ = keytype;
     if (keytype == 2)
@@ -28,6 +30,7 @@ public:
     key_ = new char[length_];
   }
 
+// Copy Constructor
   TKey(const TKey &t1) {
     key_type_ = t1.key_type_;
     length_ = t1.length_;
@@ -35,6 +38,8 @@ public:
     memcpy(key_, t1.key_, length_);
   }
 
+/* Reads a value from a char* (C-style string) and stores it in key_
+    atoi() is for char* to int . */
   void ReadValue(const char *content) {
     switch (key_type_) {
     case 0: {
@@ -51,6 +56,7 @@ public:
     }
   }
 
+// same upper readvalue method but just accept strings instead of char*
   void ReadValue(std::string str) {
     switch (key_type_) {
     case 0: {
@@ -67,17 +73,22 @@ public:
     }
   }
 
+// getters
   int key_type() { return key_type_; }
   char *key() { return key_; };
   int length() { return length_; }
 
+// destructor
   ~TKey() {
     if (key_ != NULL)
       delete[] key_;
   }
 
+// To overload the << operator for printing the key object.
   friend std::ostream &operator<<(std::ostream &out, const TKey &object);
 
+// Operator Overlaoding from now on till this class ends.
+// less than sign
   bool operator<(const TKey t1) {
     switch (t1.key_type_) {
     case 0:
@@ -91,6 +102,7 @@ public:
     }
   }
 
+// greater than sign
   bool operator>(const TKey t1) {
     switch (t1.key_type_) {
     case 0:
@@ -135,20 +147,43 @@ public:
   }
 };
 
+
+
+
+
+
+
 class SQL {
 protected:
   int sql_type_;
 
 public:
+// default constructor
   SQL() : sql_type_(-1) {}
+// parameterized constructor
   SQL(int sqltype) { sql_type_ = sqltype; }
+// destructor
   virtual ~SQL() {}
+// getter
   int sql_type() { return sql_type_; }
+// setter
   void set_sql_type(int sqltype) { sql_type_ = sqltype; }
+    
+/*  The = 0 in a virtual function declaration makes it a pure virtual function, meaning:
+    ✅ The function must be overridden by any derived class.
+    ✅ The class containing it (SQL) becomes an abstract class (cannot be instantiated directly).  */
   virtual void Parse(std::vector<std::string> sql_vector) = 0;
+    
+/* This is a regular virtual function (not pure), meaning derived classes can override it but aren't required to. */
   int ParseDataType(std::vector<std::string> sql_vector, Attribute &attr,
                     unsigned int pos);
 };
+
+
+
+
+
+
 
 class SQLCreateDatabase : public SQL {
 private:

@@ -16,21 +16,24 @@ BlockInfo *RecordManager::GetBlockInfo(Table *tbl, int block_num) {
 }
 
 void RecordManager::Insert(SQLInsert &st) {
+  // Get the table name and the number of values from the SQL insert command.
   string tb_name = st.tb_name();
   unsigned long values_size = st.values().size();
 
+  // If the table doesn't exist, throw an exception.
   Table *tbl = cm_->GetDB(db_name_)->GetTable(tb_name);
-
   if (tbl == NULL) {
     throw TableNotExistException();
   }
 
+  // Calculate the maximum number of records that can be stored in one block
   int max_count = (4096 - 12) / (tbl->record_length());
 
   vector<TKey> tkey_values;
-  int pk_index = -1;
+  int pk_index = -1; // Index for primary key in the record
 
-  for (int i = 0; i < values_size; ++i) {
+  // Convert each input value into the TKey format and check if it is a primary key
+  for (int i = 0; i < values_size; i++) {
     int value_type = st.values()[i].data_type;
     string value = st.values()[i].value;
     int length = tbl->ats()[i].length();
@@ -39,68 +42,67 @@ void RecordManager::Insert(SQLInsert &st) {
     tmp.ReadValue(value.c_str());
     tkey_values.push_back(tmp);
 
+    // If the attribute is the primary key (type = 1), record its index.
     if (tbl->ats()[i].attr_type() == 1) {
       pk_index = i;
     }
   }
 
+  // If there's a primary key, check for conflicts.
   if (pk_index != -1) {
-
     if (tbl->GetIndexNum() != 0) {
-
+      // If an index exists, use the B+ tree to quickly check for duplicate keys.
       BPlusTree tree(tbl->GetIndex(0), hdl_, cm_, db_name_);
-
       int value = tree.GetVal(tkey_values[pk_index]);
       if (value != -1) {
         throw PrimaryKeyConflictException();
       }
     } else {
+      // If no index exists, iterate through each block and record to check for a duplicate.
       int block_num = tbl->first_block_num();
       for (int i = 0; i < tbl->block_count(); ++i) {
         BlockInfo *bp = GetBlockInfo(tbl, block_num);
-
         for (int j = 0; j < bp->GetRecordCount(); ++j) {
           vector<TKey> tkey_value = GetRecord(tbl, block_num, j);
-
-          if (tkey_value[pk_index] == tkey_values[pk_index]) {
+          if (tkey_value[pk_index] == tkey_values[pk_index]) { 
             throw PrimaryKeyConflictException();
           }
         }
-
         block_num = bp->GetNextBlockNum();
       }
     }
   }
 
   char *content;
-  int ub = tbl->first_block_num();    // used block
-  int frb = tbl->first_rubbish_num(); // first rubbish block
+  int ub = tbl->first_block_num();    // The first "useful" block.
+  int frb = tbl->first_rubbish_num();   // The first "rubbish" (reusable) block.
   int lastub;
   int blocknum, offset;
 
-  // find the block for use from the useful block
-  while (ub != -1) {
+  // Search for a useful block with free space.
+  while (ub != -1) { 
     lastub = ub;
     BlockInfo *bp = GetBlockInfo(tbl, ub);
     if (bp->GetRecordCount() == max_count) {
+      // If the current block is full, move to the next block.
       ub = bp->GetNextBlockNum();
       continue;
     }
-    content =
-        bp->GetContentAddress() + bp->GetRecordCount() * tbl->record_length();
-    for (vector<TKey>::iterator iter = tkey_values.begin();
-         iter != tkey_values.end(); ++iter) {
+    // Calculate where the new record should be stored within the block.
+    content = bp->GetContentAddress() + bp->GetRecordCount() * tbl->record_length(); 
+    // Copy each key's data into the block.
+    for (vector<TKey>::iterator iter = tkey_values.begin(); iter != tkey_values.end(); ++iter) {
       memcpy(content, iter->key(), iter->length());
       content += iter->length();
     }
+    // Increase the record count for the block.
     bp->SetRecordCount(1 + bp->GetRecordCount());
 
     blocknum = ub;
     offset = bp->GetRecordCount() - 1;
-
     hdl_->WriteBlock(bp);
 
-    // add record to index
+    // Update the index with the new record if an index exists.
     if (tbl->GetIndexNum() != 0) {
       BPlusTree tree(tbl->GetIndex(0), hdl_, cm_, db_name_);
       for (int i = 0; i < tbl->ats().size(); ++i) {
@@ -113,23 +115,22 @@ void RecordManager::Insert(SQLInsert &st) {
 
     hdl_->WriteToDisk();
     cm_->WriteArchiveFile();
-
     return;
   }
 
+  // If no useful block has free space, try using a rubbish block.
   if (frb != -1) {
     BlockInfo *bp = GetBlockInfo(tbl, frb);
     content = bp->GetContentAddress();
-    for (vector<TKey>::iterator iter = tkey_values.begin();
-         iter != tkey_values.end(); ++iter) {
+    for (vector<TKey>::iterator iter = tkey_values.begin(); iter != tkey_values.end(); ++iter) {
       memcpy(content, iter->key(), iter->length());
       content += iter->length();
     }
     bp->SetRecordCount(1);
 
+    // Link the rubbish block into the chain of useful blocks.
     BlockInfo *lastubp = GetBlockInfo(tbl, lastub);
     lastubp->SetNextBlockNum(frb);
-
     tbl->set_first_rubbish_num(bp->GetNextBlockNum());
 
     bp->SetPrevBlockNum(lastub);
@@ -140,9 +141,8 @@ void RecordManager::Insert(SQLInsert &st) {
 
     hdl_->WriteBlock(bp);
     hdl_->WriteBlock(lastubp);
-
   } else {
-    // initial or add a block
+    // If no rubbish block is available, add a new block 
     int next_block = tbl->first_block_num();
     if (tbl->first_block_num() != -1) {
       BlockInfo *upbp = GetBlockInfo(tbl, tbl->first_block_num());
@@ -157,21 +157,19 @@ void RecordManager::Insert(SQLInsert &st) {
     bp->SetRecordCount(1);
 
     content = bp->GetContentAddress();
-    for (vector<TKey>::iterator iter = tkey_values.begin();
-         iter != tkey_values.end(); ++iter) {
+    for (vector<TKey>::iterator iter = tkey_values.begin(); iter != tkey_values.end(); ++iter) {
       memcpy(content, iter->key(), iter->length());
       content += iter->length();
     }
 
     blocknum = tbl->block_count();
     offset = 0;
-
     hdl_->WriteBlock(bp);
 
     tbl->IncreaseBlockCount();
   }
 
-  // add record to index
+  // After inserting, update the index with the new record if an index exists.
   if (tbl->GetIndexNum() != 0) {
     BPlusTree tree(tbl->GetIndex(0), hdl_, cm_, db_name_);
     for (int i = 0; i < tbl->ats().size(); ++i) {
@@ -185,49 +183,45 @@ void RecordManager::Insert(SQLInsert &st) {
   hdl_->WriteToDisk();
 }
 
+
 void RecordManager::Select(SQLSelect &st) {
-
+  // Get the table object and print column headers.
   Table *tbl = cm_->GetDB(db_name_)->GetTable(st.tb_name());
-
   for (int i = 0; i < tbl->GetAttributeNum(); ++i) {
     cout << setw(9) << left << tbl->ats()[i].attr_name();
   }
   cout << endl;
 
   vector<vector<TKey>> tkey_values;
-
   bool has_index = false;
-  int index_idx;
-  int where_idx;
+  int index_idx, where_idx;
 
+  // Check if any index can be used based on WHERE conditions
   if (tbl->GetIndexNum() != 0) {
     for (int i = 0; i < tbl->GetIndexNum(); ++i) {
       Index *idx = tbl->GetIndex(i);
       for (int j = 0; j < st.wheres().size(); ++j) {
-        if (idx->attr_name() == st.wheres()[j].key) {
-          if (st.wheres()[j].sign_type == SIGN_EQ) {
-            has_index = true;
-            index_idx = i;
-            where_idx = j;
-          }
+        if (idx->attr_name() == st.wheres()[j].key &&
+            st.wheres()[j].sign_type == SIGN_EQ) {
+          has_index = true;
+          index_idx = i;
+          where_idx = j;
         }
       }
     }
   }
 
+  // Full table scan if no index is applicable.
   if (!has_index) {
     int block_num = tbl->first_block_num();
     for (int i = 0; i < tbl->block_count(); ++i) {
       BlockInfo *bp = GetBlockInfo(tbl, block_num);
-
       for (int j = 0; j < bp->GetRecordCount(); ++j) {
         vector<TKey> tkey_value = GetRecord(tbl, block_num, j);
-
+        //The sats variable is used to check whether a record satisfies all WHERE conditions in the SQL SELECT query.
         bool sats = true;
-
         for (int k = 0; k < st.wheres().size(); ++k) {
-          SQLWhere where = st.wheres()[k];
-          if (!SatisfyWhere(tbl, tkey_value, where)) {
+          if (!SatisfyWhere(tbl, tkey_value, st.wheres()[k])) {
             sats = false;
           }
         }
@@ -238,64 +232,77 @@ void RecordManager::Select(SQLSelect &st) {
 
       block_num = bp->GetNextBlockNum();
     }
-  } else { // if has index
+  } 
+  else { // Use index search
+    // Create a B+ Tree object for the indexed column
     BPlusTree tree(tbl->GetIndex(index_idx), hdl_, cm_, db_name_);
 
-    // build TKey for search
+    // Retrieve the type and length of the indexed key
     int type = tbl->GetIndex(index_idx)->key_type();
     int length = tbl->GetIndex(index_idx)->key_len();
+    // Extract the search value from the WHERE condition
     std::string value = st.wheres()[where_idx].value;
+
     TKey dest_key(type, length);
-    dest_key.ReadValue(value);
-
+    dest_key.ReadValue(value); // Convert the string value into the appropriate key format
+    // Search for the value in the B+ Tree index
     int blocknum = tree.GetVal(dest_key);
-
+    // If the value exists in the index
     if (blocknum != -1) {
-      int blockoffset = blocknum;
-      blocknum = blocknum >> 16;
-      blocknum = blocknum & 0xffff;
-      blockoffset = blockoffset & 0xffff;
-      vector<TKey> tkey_value = GetRecord(tbl, blocknum, blockoffset);
-      bool sats = true;
+        int blockoffset = blocknum; // Store the original blocknum
+        blocknum = (blocknum >> 16) & 0xffff;  // Extract the block number
+        blockoffset = blockoffset & 0xffff;    // Extract the offset within the block
 
-      for (int k = 0; k < st.wheres().size(); ++k) {
-        SQLWhere where = st.wheres()[k];
-        if (!SatisfyWhere(tbl, tkey_value, where)) {
-          sats = false;
+        // Retrieve the record from the table based on the found block and offset
+        vector<TKey> tkey_value = GetRecord(tbl, blocknum, blockoffset);
+        
+        // Check if the record satisfies all WHERE conditions
+        bool sats = true;
+        for (int k = 0; k < st.wheres().size(); ++k) {
+            if (!SatisfyWhere(tbl, tkey_value, st.wheres()[k])) {
+                sats = false;
+            }
         }
-      }
-      if (sats) {
-        tkey_values.push_back(tkey_value);
-      }
+
+        // If the record matches all conditions, add it to the result set
+        if (sats) {
+            tkey_values.push_back(tkey_value);
+        }
     }
   }
 
+
+  // Print the matching records.
   for (int i = 0; i < tkey_values.size(); ++i) {
     for (int j = 0; j < tkey_values[i].size(); ++j) {
       cout << tkey_values[i][j];
     }
     cout << endl;
   }
+
+  // Optionally print the B+ tree structure for the first index for debugging.
   if (tbl->GetIndexNum() != 0) {
     BPlusTree tree(tbl->GetIndex(0), hdl_, cm_, db_name_);
     tree.Print();
   }
 }
 
+
 void RecordManager::Delete(SQLDelete &st) {
-
   Table *tbl = cm_->GetDB(db_name_)->GetTable(st.tb_name());
-
+  
   bool has_index = false;
-  int index_idx;
-  int where_idx;
+  int index_idx;  
+  int where_idx;  
 
+  // Determine if an applicable index exists for an equality condition.
   if (tbl->GetIndexNum() != 0) {
     for (int i = 0; i < tbl->GetIndexNum(); ++i) {
       Index *idx = tbl->GetIndex(i);
       for (int j = 0; j < st.wheres().size(); ++j) {
         if (idx->attr_name() == st.wheres()[j].key) {
           index_idx = i;
+          // Use the index only when the where condition is an equality.
           if (st.wheres()[j].sign_type == SIGN_EQ) {
             has_index = true;
             where_idx = j;
@@ -305,68 +312,69 @@ void RecordManager::Delete(SQLDelete &st) {
     }
   }
 
+  // If no suitable index exists, perform a full table scan.
   if (!has_index) {
+    // Iterate through all blocks in the table.
     int block_num = tbl->first_block_num();
     for (int i = 0; i < tbl->block_count(); ++i) {
       BlockInfo *bp = GetBlockInfo(tbl, block_num);
       int count = bp->GetRecordCount();
+      // For each record in the block, check if it satisfies all conditions.
       for (int j = 0; j < count; ++j) {
         vector<TKey> tkey_value = GetRecord(tbl, block_num, j);
-
         bool sats = true;
-
         for (int k = 0; k < st.wheres().size(); ++k) {
-          SQLWhere where = st.wheres()[k];
-          if (!SatisfyWhere(tbl, tkey_value, where)) {
+          if (!SatisfyWhere(tbl, tkey_value, st.wheres()[k])) {
             sats = false;
           }
         }
+        // If record meets all conditions, delete it.
         if (sats) {
           DeleteRecord(tbl, block_num, j);
+          // Additionally update the index (if it exists) by removing the corresponding key.
           if (tbl->GetIndexNum() != 0) {
             BPlusTree tree(tbl->GetIndex(index_idx), hdl_, cm_, db_name_);
-
             int idx = -1;
             for (int i = 0; i < tbl->GetAttributeNum(); ++i) {
-              if (tbl->ats()[i].attr_name() ==
-                  tbl->GetIndex(index_idx)->attr_name()) {
+              if (tbl->ats()[i].attr_name() == tbl->GetIndex(index_idx)->attr_name()) {
                 idx = i;
               }
             }
-
             tree.Remove(tkey_value[idx]);
           }
         }
       }
-
+      // Move to the next block.
       block_num = bp->GetNextBlockNum();
     }
-  } else { // if has index
+  } else {  
+    // Use the index to quickly locate the record matching the equality condition.
     BPlusTree tree(tbl->GetIndex(index_idx), hdl_, cm_, db_name_);
 
-    // build TKey for search
+    // Build a TKey from the where clause value for the indexed attribute.
     int type = tbl->GetIndex(index_idx)->key_type();
     int length = tbl->GetIndex(index_idx)->key_len();
     std::string value = st.wheres()[where_idx].value;
     TKey dest_key(type, length);
     dest_key.ReadValue(value);
 
+    // Use the B+ tree to get the encoded block number where the record is located.
     int blocknum = tree.GetVal(dest_key);
-
     if (blocknum != -1) {
+      // Decode the combined block number and offset.
       int blockoffset = blocknum;
-      blocknum = blocknum >> 16;
-      blocknum = blocknum & 0xffff;
+      blocknum = (blocknum >> 16) & 0xffff;
       blockoffset = blockoffset & 0xffff;
+      
+      // Retrieve the record using the decoded block number and offset.
       vector<TKey> tkey_value = GetRecord(tbl, blocknum, blockoffset);
       bool sats = true;
-
       for (int k = 0; k < st.wheres().size(); ++k) {
-        SQLWhere where = st.wheres()[k];
-        if (!SatisfyWhere(tbl, tkey_value, where)) {
+        if (!SatisfyWhere(tbl, tkey_value, st.wheres()[k])) {
           sats = false;
         }
       }
+      // If the record satisfies all conditions, delete it and update the index.
       if (sats) {
         DeleteRecord(tbl, blocknum, blockoffset);
         tree.Remove(dest_key);
@@ -374,115 +382,115 @@ void RecordManager::Delete(SQLDelete &st) {
     }
   }
 
+  // Write changes to disk.
   hdl_->WriteToDisk();
 }
 
 void RecordManager::Update(SQLUpdate &st) {
+  // Get the table using the database and table names.
   Table *tbl = cm_->GetDB(db_name_)->GetTable(st.tb_name());
 
-  vector<int> indices;
-  vector<TKey> values;
-  int pk_index = -1;
-  int affect_index = -1;
+  vector<int> indices;    // Attribute indices to be updated.
+  vector<TKey> values;    // New values for the attributes.
+  int pk_index = -1;      // Primary key attribute index.
+  int affect_index = -1;  // Index in the keyvalues vector for the primary key update.
 
+  // Find the primary key attribute.
   for (int i = 0; i < tbl->ats().size(); ++i) {
     if (tbl->ats()[i].attr_type() == 1) {
       pk_index = i;
     }
   }
 
+  // Build indices and new values; also record if the primary key is affected.
   for (int i = 0; i < st.keyvalues().size(); ++i) {
     int index = tbl->GetAttributeIndex(st.keyvalues()[i].key);
     indices.push_back(index);
     TKey value(tbl->ats()[index].data_type(), tbl->ats()[index].length());
     value.ReadValue(st.keyvalues()[i].value);
     values.push_back(value);
-
     if (index == pk_index) {
       affect_index = i;
     }
   }
 
+  // Check for primary key conflicts if the primary key is being updated.
   if (affect_index != -1) {
+    // If an index exists, use it to quickly check for conflicts.
     if (tbl->GetIndexNum() != 0) {
-
       BPlusTree tree(tbl->GetIndex(0), hdl_, cm_, db_name_);
-
       int value = tree.GetVal(values[affect_index]);
-      if (value != -1) {
+      if (value != -1) {  // A record with the new primary key already exists.
         throw PrimaryKeyConflictException();
       }
     } else {
+      // No index available, so perform a full scan to detect conflicts.
       int block_num = tbl->first_block_num();
       for (int i = 0; i < tbl->block_count(); ++i) {
         BlockInfo *bp = GetBlockInfo(tbl, block_num);
-
         for (int j = 0; j < bp->GetRecordCount(); ++j) {
           vector<TKey> tkey_value = GetRecord(tbl, block_num, j);
-
           if (tkey_value[pk_index] == values[affect_index]) {
             throw PrimaryKeyConflictException();
           }
         }
-
         block_num = bp->GetNextBlockNum();
       }
     }
   }
 
+  // Iterate through the table blocks to update matching records.
   int block_num = tbl->first_block_num();
   for (int i = 0; i < tbl->block_count(); ++i) {
     BlockInfo *bp = GetBlockInfo(tbl, block_num);
-
     for (int j = 0; j < bp->GetRecordCount(); ++j) {
       vector<TKey> tkey_value = GetRecord(tbl, block_num, j);
-
       bool sats = true;
-
+      // Check if the record meets all where conditions.
       for (int k = 0; k < st.wheres().size(); ++k) {
-        SQLWhere where = st.wheres()[k];
-        if (!SatisfyWhere(tbl, tkey_value, where)) {
+        if (!SatisfyWhere(tbl, tkey_value, st.wheres()[k])) {
           sats = false;
         }
       }
       if (sats) {
+        // If an index exists, remove the old key value.
         if (tbl->GetIndexNum() != 0) {
           BPlusTree tree(tbl->GetIndex(0), hdl_, cm_, db_name_);
-
           int idx = -1;
           for (int i = 0; i < tbl->GetAttributeNum(); ++i) {
             if (tbl->ats()[i].attr_name() == tbl->GetIndex(0)->attr_name()) {
               idx = i;
             }
           }
-
           tree.Remove(tkey_value[idx]);
         }
 
+        // Update the record with the new values.
         UpdateRecord(tbl, block_num, j, indices, values);
 
+        // After update, get the new record values.
         tkey_value = GetRecord(tbl, block_num, j);
 
+        // If an index exists, add the new key value back into the index.
         if (tbl->GetIndexNum() != 0) {
           BPlusTree tree(tbl->GetIndex(0), hdl_, cm_, db_name_);
-
           int idx = -1;
           for (int i = 0; i < tbl->GetAttributeNum(); ++i) {
             if (tbl->ats()[i].attr_name() == tbl->GetIndex(0)->attr_name()) {
               idx = i;
             }
           }
-
           tree.Add(tkey_value[idx], block_num, j);
         }
       }
     }
-
     block_num = bp->GetNextBlockNum();
   }
 
+  // Write changes to disk.
   hdl_->WriteToDisk();
 }
+
 
 std::vector<TKey> RecordManager::GetRecord(Table *tbl, int block_num,
                                            int offset) {
@@ -496,7 +504,7 @@ std::vector<TKey> RecordManager::GetRecord(Table *tbl, int block_num,
     int length = tbl->ats()[i].length();
 
     TKey tmp(value_type, length);
-
+ //memcpy is used for efficient copying of blocks of memory in situations where you know that the source and destination regions do not intersect
     memcpy(tmp.key(), content, length);
 
     keys.push_back(tmp);
@@ -517,8 +525,9 @@ void RecordManager::DeleteRecord(Table *tbl, int block_num, int offset) {
 
   bp->DecreaseRecordCount();
 
-  if (bp->GetRecordCount() == 0) { // add the block to rubbish block chain
-
+  // add the block to rubbish block chain
+  if (bp->GetRecordCount() == 0) { 
+    
     int prevnum = bp->GetPrevBlockNum();
     int nextnum = bp->GetNextBlockNum();
 
@@ -555,7 +564,7 @@ void RecordManager::UpdateRecord(Table *tbl, int block_num, int offset,
 
   char *content = bp->data() + offset * tbl->record_length() + 12;
 
-  for (int i = 0; i < tbl->GetAttributeNum(); ++i) {
+  for (int i = 0; i < tbl->GetAttributeNum(); i++) {
     vector<int>::iterator iter = find(indices.begin(), indices.end(), i);
     if (iter != indices.end()) {
       memcpy(content, values[iter - indices.begin()].key(),
@@ -568,39 +577,35 @@ void RecordManager::UpdateRecord(Table *tbl, int block_num, int offset,
   hdl_->WriteBlock(bp);
 }
 
-bool RecordManager::SatisfyWhere(Table *tbl, std::vector<TKey> keys,
-                                 SQLWhere where) {
+bool RecordManager::SatisfyWhere(Table *tbl, std::vector<TKey> keys, SQLWhere where) {
+  // Find the index of the attribute that matches the condition's key
   int idx = -1;
   for (int i = 0; i < tbl->GetAttributeNum(); ++i) {
     if (tbl->ats()[i].attr_name() == where.key) {
       idx = i;
     }
   }
-  // cout << idx;
-
+  
+  // Create a temporary key based on the attribute's type and length.
   TKey tmp(tbl->ats()[idx].data_type(), tbl->ats()[idx].length());
+  // Convert the WHERE clause value to the appropriate format.
   tmp.ReadValue(where.value.c_str());
+  
   switch (where.sign_type) {
-  case SIGN_EQ:
-    return keys[idx] == tmp;
-    break;
-  case SIGN_NE:
-    return keys[idx] != tmp;
-    break;
-  case SIGN_LT:
-    return keys[idx] < tmp;
-    break;
-  case SIGN_GT:
-    return keys[idx] > tmp;
-    break;
-  case SIGN_LE:
-    return keys[idx] <= tmp;
-    break;
-  case SIGN_GE:
-    return keys[idx] >= tmp;
-    break;
-  default:
-    return false;
-    break;
+    case SIGN_EQ:  // Equality check.
+      return keys[idx] == tmp;
+    case SIGN_NE:  // Not-equal check.
+      return keys[idx] != tmp;
+    case SIGN_LT:  // Less-than check.
+      return keys[idx] < tmp;
+    case SIGN_GT:  // Greater-than check.
+      return keys[idx] > tmp;
+    case SIGN_LE:  // Less-than or equal check.
+      return keys[idx] <= tmp;
+    case SIGN_GE:  // Greater-than or equal check.
+      return keys[idx] >= tmp;
+    default:
+      return false;
   }
 }
+

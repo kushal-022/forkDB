@@ -10,12 +10,14 @@ class FileInfo;
 
 class BlockInfo {
 private:
-  FileInfo *file_;
-  int block_num_;
-  char *data_;
-  bool dirty_;
-  long age_;
-  BlockInfo *next_;
+
+
+  FileInfo *file_; //Pointer to the associated file.
+  int block_num_; //Block number identifier.
+  char *data_; // Pointer to a memory block (allocated as 4 * 1024 bytes).
+  bool dirty_; //Flag indicating if the block has been modified.
+  long age_; //Age counter for the block.
+  BlockInfo *next_; //Pointer to the next BlockInfo block in a linked list.
 
 public:
   BlockInfo(int num)
@@ -41,6 +43,12 @@ public:
 
   void IncreaseAge() { ++age_; }
   void ResetAge() { age_ = 0; }
+
+//   Offset	Purpose
+// 0	Previous block number (int)
+// 4	Next block number (int)
+// 8	Record count (int)
+// 12+	Actual content starts
 
   void SetPrevBlockNum(int num) { *(int *)(data_) = num; }
 

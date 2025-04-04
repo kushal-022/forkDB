@@ -6,8 +6,10 @@
 #include "commons.h"
 
 class BlockInfo;
-
 class FileInfo {
+// The FileInfo class represents metadata about a file in a database system. 
+//Metadata is "data about data." It provides descriptive information about a file, database, or dataset, helping to organize, manage, and retrieve data efficiently.
+
 private:
   std::string db_name_;
   int type_;               // 0: data file, 1: index file
@@ -40,6 +42,7 @@ public:
 
   void IncreaseRecordAmount() { record_amount_++; }
   void IncreaseRecordLength() { record_length_ += 4096; }
+  //increase 1 block (4096 bytes)
 };
 
 #endif

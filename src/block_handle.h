@@ -4,11 +4,12 @@
 #include "block_info.h"
 
 class BlockHandle {
-private:
-  BlockInfo *first_block_;
-  int bsize_;  // total #
-  int bcount_; // usable #
-  std::string path_;
+  //Mostly used to calculate usable blocks, deals with deletion and addidition in usable blocks
+  private:
+  BlockInfo *first_block_;  // Pointer to the first usable block in the list
+  int bsize_;  // Total number of blocks (default 300)
+  int bcount_; // Number of usable blocks
+  std::string path_;  // File path related to block storage
 
   // Inits BlockHandle
   BlockInfo *Add(BlockInfo *block);

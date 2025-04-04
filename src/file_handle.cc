@@ -1,10 +1,16 @@
 #include "file_handle.h"
-
 #include <fstream>
-
 #include "commons.h"
 
 using namespace std;
+//File Info:
+// db_name_ → Name of the database this file is part of.
+// type_ → Tells if the file stores data (0) or indexes (1).
+// file_name_ → Actual name of the file.
+// record_amount_ → Number of records stored in this file.
+// record_length_ → Size of each record.
+// first_block_ → Points to the first block of data in the file.
+// next_ → Connects to the next file in a linked list, allowing multiple files to be linked together.
 
 FileHandle::~FileHandle() {
   WriteToDisk();

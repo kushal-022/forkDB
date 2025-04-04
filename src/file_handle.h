@@ -24,4 +24,4 @@ public:
   void WriteToDisk();
 };
 
-#endif /* defined(MINIDB_FILE_HANDLE_H_) */
+#endif

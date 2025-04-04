@@ -11,13 +11,15 @@ class FileInfo;
 class BlockInfo {
 private:
 
-
   FileInfo *file_; //Pointer to the associated file.
   int block_num_; //Block number identifier.
   char *data_; // Pointer to a memory block (allocated as 4 * 1024 bytes).
   bool dirty_; //Flag indicating if the block has been modified.
   long age_; //Age counter for the block.
   BlockInfo *next_; //Pointer to the next BlockInfo block in a linked list.
+
+// Implementing replacement policies like Least Recently Used (LRU) or Least Frequently Used (LFU)
+// in a database buffer or cache system
 
 public:
   BlockInfo(int num)

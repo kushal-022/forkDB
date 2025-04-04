@@ -53,7 +53,7 @@ void MiniDBAPI::CreateDatabase(SQLCreateDatabase &st) {
   std::cout << "Creating database: " << st.db_name() << std::endl;
   std::string folder_name(path_ + st.db_name());
   boost::filesystem::path folder_path(folder_name);
-
+ //Used to define language used in the file system
   folder_path.imbue(std::locale("en_US.UTF-8"));
 
   if (cm_->GetDB(st.db_name()) != NULL) {
@@ -70,6 +70,7 @@ void MiniDBAPI::CreateDatabase(SQLCreateDatabase &st) {
 
   cm_->CreateDatabase(st.db_name());
   std::cout << "Catalog written!" << std::endl;
+  //File handling
   cm_->WriteArchiveFile();
 }
 
@@ -97,12 +98,12 @@ void MiniDBAPI::DropDatabase(SQLDropDatabase &st) {
   if (found == false) {
     throw DatabaseNotExistException();
   }
-
+  //Folder path
   std::string folder_name(path_ + st.db_name());
   boost::filesystem::path folder_path(folder_name);
 
   folder_path.imbue(std::locale("en_US.UTF-8"));
-
+  //Check if the file exists
   if (!boost::filesystem::exists(folder_path)) {
     std::cout << "Database folder doesn't exists!" << std::endl;
   } else {
@@ -158,7 +159,7 @@ void MiniDBAPI::CreateTable(SQLCreateTable &st) {
     boost::filesystem::remove(file_name);
     std::cout << "Table file already exists and deleted!" << std::endl;
   }
-
+ //ofstream (output file stream) is from <fstream>, used for writing data to files.
   ofstream ofs(file_name);
   ofs.close();
   std::cout << "Table file created!" << std::endl;

@@ -12,6 +12,15 @@ CatalogManager::CatalogManager(std::string p) : path_(p) { ReadArchiveFile(); }
 
 CatalogManager::~CatalogManager() { WriteArchiveFile(); }
 
+Database *CatalogManager::GetDB(std::string db_name) {
+  for (unsigned int i = 0; i < dbs_.size(); ++i) {
+    if (dbs_[i].db_name() == db_name) {
+      return &dbs_[i];
+    }
+  }
+  return NULL;
+}
+
 void CatalogManager::ReadArchiveFile() {
   std::string file_name = path_ + "catalog";
   boost::filesystem::path file_path(file_name);
@@ -49,14 +58,6 @@ void CatalogManager::DeleteDatabase(std::string dbname) {
   }
 }
 
-Database *CatalogManager::GetDB(std::string db_name) {
-  for (unsigned int i = 0; i < dbs_.size(); ++i) {
-    if (dbs_[i].db_name() == db_name) {
-      return &dbs_[i];
-    }
-  }
-  return NULL;
-}
 
 //=======================Database=============================//
 

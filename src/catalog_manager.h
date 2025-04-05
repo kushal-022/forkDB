@@ -1,9 +1,10 @@
+//Checks if MINIDB_CATALOG_MANAGER_H_ is not defined
 #ifndef MINIDB_CATALOG_MANAGER_H_
+//If not, define it
 #define MINIDB_CATALOG_MANAGER_H_
 
 #include <string>
 #include <vector>
-
 // Boost serialization libraries allow saving/loading object state to/from disk
 //Serialization: a process that converts objects into a format that can be stored in a file or sent over a network, and later reconstructed
 #include <boost/archive/binary_iarchive.hpp>
@@ -13,6 +14,7 @@
 
 #include "sql_statement.h"
 
+class CatalogManager;
 class Database;
 class Table;
 class Attribute;
@@ -21,14 +23,15 @@ class SQLCreateTable;
 class SQLDropTable;
 class SQLDropIndex;
 
-// CatalogManager: Manages the collection of databases (schemas) and their storage.
+
+// CatalogManager: Manages the collection of databases (schemas) and their storage
 class CatalogManager {
 private:
   // Allow boost serialization to access private members.
   friend class boost::serialization::access;
-
   // This function defines how to serialize the databases list.
   template <class Archive>
+
   void serialize(Archive &ar, const unsigned int version) {
     ar &dbs_;  // Serialize the vector of Database objects.
   }
@@ -60,9 +63,9 @@ public:
 class Database {
 private:
   friend class boost::serialization::access;
-
-  // Serialization function for Database.
+  // Used by boost::serialization. Defined in all classes that need serialization.
   template <class Archive>
+
   void serialize(Archive &ar, const unsigned int version) {
     ar &db_name_;  // Serialize the database name.
     ar &tbs_;      // Serialize the vector of Table objects.
@@ -95,9 +98,8 @@ public:
 class Table {
 private:
   friend class boost::serialization::access;
-
-  // Serialization function for Table.
   template <class Archive>
+
   void serialize(Archive &ar, const unsigned int version) {
     ar &tb_name_;            // Table name.
     ar &record_length_;      // Length of a single record.
@@ -118,9 +120,7 @@ private:
 
 public:
   // Constructor initializing members to default values.
-  Table()
-      : tb_name_(""), record_length_(-1), first_block_num_(-1),
-        first_rubbish_num_(-1), block_count_(0) {}
+  Table() : tb_name_(""), record_length_(-1), first_block_num_(-1), first_rubbish_num_(-1), block_count_(0) {}
   ~Table() {}
 
   // Accessor and mutator for table name.
@@ -149,7 +149,7 @@ public:
   unsigned long GetAttributeNum() { return ats_.size(); }
   // Add a new attribute (column) to the table.
   void AddAttribute(Attribute &attr) { ats_.push_back(attr); }
-  // Increase the block count (e.g., when a new block is allocated).
+  // Increase the block count 
   void IncreaseBlockCount() { block_count_++; }
 
   // Accessor for the list of indexes.
@@ -166,9 +166,8 @@ public:
 class Attribute {
 private:
   friend class boost::serialization::access;
-
-  // Serialization for Attribute.
   template <class Archive>
+
   void serialize(Archive &ar, const unsigned int version) {
     ar &attr_name_;  // Serialize attribute name.
     ar &data_type_;  // Serialize data type.

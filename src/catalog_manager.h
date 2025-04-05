@@ -43,8 +43,9 @@ public:
   CatalogManager(std::string p);
   ~CatalogManager();
 
-  // Accessor for the list of databases.
-  std::vector<Database> &dbs() { return dbs_; }
+// The function name is dbs().
+//The return type is std::vector<Database> &, which means the function returns a reference to a std::vector<Database>.
+  std::vector<Database>& dbs() { return dbs_; }
   // Accessor for the catalog storage path.
   std::string path() { return path_; }
   // Retrieve a database by its name.

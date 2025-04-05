@@ -1,7 +1,6 @@
 #include "catalog_manager.h"
-
+#include "exceptions.h"
 #include <fstream>
-
 #include <boost/filesystem.hpp>
 
 using namespace std;
@@ -47,6 +46,11 @@ void CatalogManager::WriteArchiveFile() {
 }
 
 void CatalogManager::CreateDatabase(std::string dbname) {
+  for (unsigned int i = 0; i < dbs_.size(); ++i) {
+    if (dbs_[i].db_name() == dbname) {
+      throw DatabaseNotExistException();
+    }
+  }
   dbs_.push_back(Database(dbname));
 }
 

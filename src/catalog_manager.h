@@ -60,7 +60,7 @@ public:
   void DeleteDatabase(std::string dbname);
 };
 
-// Database: Represents a single database containing a collection of tables.
+
 class Database {
 private:
   friend class boost::serialization::access;
@@ -71,8 +71,8 @@ private:
     ar &db_name_;  // Serialize the database name.
     ar &tbs_;      // Serialize the vector of Table objects.
   }
-  std::string db_name_;         // Name of the database.
-  std::vector<Table> tbs_;        // Tables contained in this database.
+  std::string db_name_;     
+  std::vector<Table> tbs_; // Tables contained in this database.
 
 public:
   Database() {}

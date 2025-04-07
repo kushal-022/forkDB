@@ -70,6 +70,12 @@ Database::Database(std::string dbname) : db_name_(dbname) {}
 void Database::CreateTable(SQLCreateTable &st) {
   int record_length = 0;
   Table tb;
+  vector<Table>::iterator i;
+  for (i = tbs_.begin(); i != tbs_.end(); i++) {
+    if (i->tb_name() == st.tb_name()) {
+      throw TableAlreadyExistsException();
+    }
+  }
   for (int i = 0; i < st.attrs().size(); ++i) {
     tb.AddAttribute(st.attrs()[i]);
     record_length += st.attrs()[i].length();
@@ -87,6 +93,7 @@ void Database::DropTable(SQLDropTable &st) {
       return;
     }
   }
+  throw TableNotExistException();
 }
 
 void Database::DropIndex(SQLDropIndex &st) {

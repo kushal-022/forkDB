@@ -5,12 +5,30 @@
 #include <vector>
 
 #include "catalog_manager.h"
-
+//Declarations for classes simplify dependencies by informing the compiler of their existence without including full definitions
+//This can make code more readable and save time while calling them
 class CatalogManager;
 class Database;
 class Table;
 class Attribute;
 class Index;
+
+
+//Declarations for SQL statement classes
+class TKey;
+class SQL;
+class SQLCreateDatabase;
+class SQLDropDatabase;
+class SQLDropTable;
+class SQLDropIndex;
+class SQLUse;
+class SQLCreateTable;
+class SQLInsert;
+class SQLExec;
+class SQLSelect;
+class SQLCreateIndex;
+class SQLDelete;
+class SQLUpdate;
 
 class TKey {
 private:
@@ -88,68 +106,14 @@ public:
   friend std::ostream &operator<<(std::ostream &out, const TKey &object);
 
 // Operator Overlaoding from now on till this class ends.
-// less than sign
-  bool operator<(const TKey t1) {
-    switch (t1.key_type_) {
-    case 0:
-      return *(int *)key_ < *(int *)t1.key_;
-    case 1:
-      return *(float *)key_ < *(float *)t1.key_;
-    case 2:
-      return (strncmp(key_, t1.key_, length_) < 0);
-    default:
-      return false;
-    }
-  }
+  bool operator<(const TKey t1);
+  bool operator>(const TKey t1);
+  bool operator<=(const TKey t1);
+  bool operator>=(const TKey t1);
+  bool operator==(const TKey t1);
+  bool operator!=(const TKey t1);
 
-// greater than sign
-  bool operator>(const TKey t1) {
-    switch (t1.key_type_) {
-    case 0:
-      return *(int *)key_ > *(int *)t1.key_;
-    case 1:
-      return *(float *)key_ > *(float *)t1.key_;
-    case 2:
-      return (strncmp(key_, t1.key_, length_) > 0);
-    default:
-      return false;
-    }
-  }
-
-  bool operator<=(const TKey t1) { return !(operator>(t1)); }
-
-  bool operator>=(const TKey t1) { return !(operator<(t1)); }
-
-  bool operator==(const TKey t1) {
-    switch (t1.key_type_) {
-    case 0:
-      return *(int *)key_ == *(int *)t1.key_;
-    case 1:
-      return *(float *)key_ == *(float *)t1.key_;
-    case 2:
-      return (strncmp(key_, t1.key_, length_) == 0);
-    default:
-      return false;
-    }
-  }
-
-  bool operator!=(const TKey t1) {
-    switch (t1.key_type_) {
-    case 0:
-      return *(int *)key_ != *(int *)t1.key_;
-    case 1:
-      return *(float *)key_ != *(float *)t1.key_;
-    case 2:
-      return (strncmp(key_, t1.key_, length_) != 0);
-    default:
-      return false;
-    }
-  }
 };
-
-
-
-
 
 
 
@@ -160,29 +124,18 @@ protected:
 public:
 // default constructor
   SQL() : sql_type_(-1) {}
-// parameterized constructor
   SQL(int sqltype) { sql_type_ = sqltype; }
-// destructor
   virtual ~SQL() {}
-// getter
   int sql_type() { return sql_type_; }
-// setter
   void set_sql_type(int sqltype) { sql_type_ = sqltype; }
     
-/*  The = 0 in a virtual function declaration makes it a pure virtual function, meaning:
-    ✅ The function must be overridden by any derived class.
-    ✅ The class containing it (SQL) becomes an abstract class (cannot be instantiated directly).  */
+//Pure virtual [= 0 at the end], so derived class must implement it
+//if [ = 0] not present at end → Virtual but not pure, so derived class can override it, but doesn’t have to.
   virtual void Parse(std::vector<std::string> sql_vector) = 0;
-    
-/* This is a regular virtual function (not pure), meaning derived classes can override it but aren't required to. */
+//Store value in attribute
   int ParseDataType(std::vector<std::string> sql_vector, Attribute &attr,
                     unsigned int pos);
 };
-
-
-
-
-
 
 
 class SQLCreateDatabase : public SQL {

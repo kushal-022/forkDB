@@ -11,11 +11,11 @@
 #define T_CHAR 2
 
 //=	<>	<	>	<=	>=
-#define SIGN_EQ 0
-#define SIGN_NE 1
-#define SIGN_LT 2
-#define SIGN_GT 3
-#define SIGN_LE 4
-#define SIGN_GE 5
+#define SIGN_EQ 0 // ==	Equals
+#define SIGN_NE 1 // !=	Not equal
+#define SIGN_LT 2 // <	Less than
+#define SIGN_GT 3 // >	Greater than
+#define SIGN_LE 4 // <=	Less or equal
+#define SIGN_GE 5 // >=	Greater or equal
 
 #endif

@@ -7,6 +7,7 @@
 #include <vector>
 // Boost serialization libraries allow saving/loading object state to/from disk
 //Serialization: a process that converts objects into a format that can be stored in a file or sent over a network, and later reconstructed
+//Every data type in every class is serialised, so that storing is possible
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/utility.hpp>
@@ -199,8 +200,8 @@ public:
   void set_data_type(int type) { data_type_ = type; }
 
   // Accessor and mutator for length.
-  void set_length(int length) { length_ = length; }
   int length() { return length_; }
+  void set_length(int length) { length_ = length; }
 };
 
 // Index: Represents an index built on a table's attribute (typically using a B+ tree).
@@ -211,18 +212,18 @@ private:
   // Serialization for Index.
   template <class Archive>
   void serialize(Archive &ar, const unsigned int version) {
-    ar &max_count_;   // Maximum keys per node.
-    ar &attr_name_;   // The attribute the index is built on.
-    ar &name_;        // Name of the index.
-    ar &key_len_;     // Length of each key.
-    ar &key_type_;    // Data type of keys.
-    ar &rank_;        // Rank of the index (could be used for ordering).
-    ar &rubbish_;     // Pointer to a free list for nodes.
-    ar &root_;        // Root node index of the B+ tree.
-    ar &leaf_head_;   // Head pointer to the first leaf node.
-    ar &key_count_;   // Number of keys currently stored.
-    ar &level_;       // Level (height) of the B+ tree.
-    ar &node_count_;  // Total nodes in the tree.
+    ar &max_count_;
+    ar &attr_name_;
+    ar &name_;
+    ar &key_len_;
+    ar &key_type_;
+    ar &rank_;
+    ar &rubbish_;
+    ar &root_;
+    ar &leaf_head_;
+    ar &key_count_;
+    ar &level_;
+    ar &node_count_;
   }
   int max_count_;  // Maximum number of keys a node can hold.
   int key_len_;    // Length in bytes of a key.
@@ -288,6 +289,7 @@ public:
   int IncreaseKeyCount() { return key_count_++; }
   int IncreaseNodeCount() { return node_count_++; }
   int IncreaseLevel() { return level_++; }
+  
   int DecreaseKeyCount() { return key_count_--; }
   int DecreaseNodeCount() { return node_count_--; }
   int DecreaseLevel() { return level_--; }

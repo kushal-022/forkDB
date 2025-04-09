@@ -235,6 +235,7 @@ void Interpreter::Run() {
       delete st;
     }
     case 120: {
+      SQLJoin *st = new SQLJoin(sql_vector_);
       //JOIN FUNCTION
     }
     break;

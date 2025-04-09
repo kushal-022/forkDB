@@ -348,3 +348,6 @@ void MiniDBAPI::Update(SQLUpdate &st) {
   rm->Update(st);
   delete rm;
 }
+void MiniDBAPI::Join(SQLJoin &st){
+  //JOIN FUNCTION
+}

@@ -32,6 +32,7 @@ public:
   void CreateIndex(SQLCreateIndex &st);
   void Delete(SQLDelete &st);
   void Update(SQLUpdate &st);
+  void Join(SQLJoin &st);
 };
 
 #endif /* MINIDB_MINIDB_API_H_ */

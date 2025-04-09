@@ -222,6 +222,64 @@ void SQLCreateTable::Parse(std::vector<std::string> sql_vector) {
   }
 }
 
+void SQLInsert::Parse(std::vector<std::string> sql_vector) {
+  sql_type_ = 70;
+  unsigned int pos = 1;
+  bool is_attr = true;
+
+  if (to_lower_copy(sql_vector[pos]) != "into") {
+    throw SyntaxErrorException();
+  }
+  pos++;
+  cout << "TABLE NAME: " << sql_vector[pos] << endl;
+  tb_name_ = sql_vector[pos];
+  pos++;
+  if (to_lower_copy(sql_vector[pos]) != "values") {
+    throw SyntaxErrorException();
+  }
+  pos++;
+  if (to_lower_copy(sql_vector[pos]) != "(") {
+    throw SyntaxErrorException();
+  }
+  pos++;
+  while (is_attr) {
+    is_attr = false;  // Assume it's the last value unless another is found
+    SQLValue sql_value;  // Create a new SQLValue object to hold the value
+    std::string value = sql_vector[pos];  // Get current value token
+
+    // If value is quoted (string), remove quotes and set data_type = 2
+    if (value.at(0) == '\'' || value.at(0) == '\"') {
+      value.assign(value, 1, value.length() - 2);  // Remove surrounding quotes
+      sql_value.data_type = 2;  // String
+    } else {
+      // If value contains '.', treat as float
+      if (value.find(".") != string::npos) {
+        sql_value.data_type = 1;  // Float
+      } else {
+        sql_value.data_type = 0;  // Integer
+      }
+    }
+    sql_value.value = value;
+    cout << sql_value.data_type << " : " << value << endl;
+    pos++;
+    values_.push_back(sql_value);
+    if (sql_vector[pos] != ")") {
+      is_attr = true;
+    }
+    pos++;
+  }
+}
+
+void SQLExec::Parse(std::vector<std::string> sql_vector) {
+  sql_type_ = 80;
+  if (sql_vector.size() <= 1) {
+    throw SyntaxErrorException();
+  } else {
+    std::cout << "FILE NAME: " << sql_vector[1] << std::endl;
+    file_name_ = sql_vector[1];
+  }
+}
+
 void SQLSelect::Parse(std::vector<std::string> sql_vector) {
   sql_type_ = 90; //SELECT
   unsigned int pos = 1;
@@ -295,16 +353,6 @@ void SQLSelect::Parse(std::vector<std::string> sql_vector) {
   }
 }
 
-void SQLExec::Parse(std::vector<std::string> sql_vector) {
-  sql_type_ = 80;
-  if (sql_vector.size() <= 1) {
-    throw SyntaxErrorException();
-  } else {
-    std::cout << "FILE NAME: " << sql_vector[1] << std::endl;
-    file_name_ = sql_vector[1];
-  }
-}
-
 void SQLDropDatabase::Parse(std::vector<std::string> sql_vector) {
   sql_type_ = 50;
   if (sql_vector.size() <= 2) {
@@ -348,51 +396,6 @@ void SQLCreateIndex::Parse(std::vector<std::string> sql_vector) {
     throw SyntaxErrorException();
   }
   pos++;
-}
-
-void SQLInsert::Parse(std::vector<std::string> sql_vector) {
-  sql_type_ = 70;
-  unsigned int pos = 1;
-  bool is_attr = true;
-
-  if (to_lower_copy(sql_vector[pos]) != "into") {
-    throw SyntaxErrorException();
-  }
-  pos++;
-  cout << "TABLE NAME: " << sql_vector[pos] << endl;
-  tb_name_ = sql_vector[pos];
-  pos++;
-  if (to_lower_copy(sql_vector[pos]) != "values") {
-    throw SyntaxErrorException();
-  }
-  pos++;
-  if (to_lower_copy(sql_vector[pos]) != "(") {
-    throw SyntaxErrorException();
-  }
-  pos++;
-  while (is_attr) {
-    is_attr = false;
-    SQLValue sql_value;
-    std::string value = sql_vector[pos];
-    if (value.at(0) == '\'' || value.at(0) == '\"') {
-      value.assign(value, 1, value.length() - 2);
-      sql_value.data_type = 2;
-    } else {
-      if (value.find(".") != string::npos) {
-        sql_value.data_type = 1;
-      } else {
-        sql_value.data_type = 0;
-      }
-    }
-    sql_value.value = value;
-    cout << sql_value.data_type << " : " << value << endl;
-    pos++;
-    values_.push_back(sql_value);
-    if (sql_vector[pos] != ")") {
-      is_attr = true;
-    }
-    pos++;
-  }
 }
 
 void SQLDelete::Parse(std::vector<std::string> sql_vector) {
@@ -558,4 +561,33 @@ void SQLUpdate::Parse(std::vector<std::string> sql_vector) {
     }
     pos++;
   }
+}
+
+void SQLJoin::Parse(std::vector<std::string> sql_vector) {
+  sql_type_ = 120;
+  unsigned int pos = 1;
+  // SYNTAX : JOIN t1 AND t2 ON t1-att = t2-att
+  //Size = 8
+  if (sql_vector.size() != 8) {
+    throw SyntaxErrorException();
+  }
+  tb_name1_ = sql_vector[pos];
+  pos++;
+  if (sql_vector[pos] != "AND") {
+    throw SyntaxErrorException();
+  }
+  pos++;
+  tb_name2_ = sql_vector[pos];
+  pos++;
+  if (sql_vector[pos] != "ON") {
+    throw SyntaxErrorException();
+  }
+  pos++;
+  col_name1_ = sql_vector[pos];
+  pos++;
+  if (sql_vector[pos] != "=") {
+    throw SyntaxErrorException();
+  }
+  pos++;
+  col_name2_ = sql_vector[pos];
 }

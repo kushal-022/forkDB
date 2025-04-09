@@ -297,4 +297,19 @@ public:
   std::vector<SQLKeyValue> &keyvalues() { return keyvalues_; }
 };
 
+class SQLJoin : public SQL {
+private:
+  std::string tb_name1_;
+  std::string tb_name2_;
+  std::string col_name1_;
+  std::string col_name2_;
+public:
+  SQLJoin(std::vector<std::string> sql_vector) { Parse(sql_vector); }
+  void Parse(std::vector<std::string> sql_vector);
+  std::string tb_name1() { return tb_name1_; }
+  std::string tb_name2() { return tb_name2_; }
+  std::string col_name1() { return col_name1_; }
+  std::string col_name2() { return col_name2_; }
+};
+
 #endif

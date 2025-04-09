@@ -138,6 +138,9 @@ void Interpreter::TellSQLType() {
   } else if (sql_vector_[0] == "update") {
     cout << "SQL TYPE: #UPDATE#" << endl;
     sql_type_ = 110;
+  } else if (sql_vector_[0] == "join") {
+    cout << "SQL TYPE: #UPDATE#" << endl;
+    sql_type_ = 120;
   } else {
     sql_type_ = -1;
     cout << "SQL TYPE: #UNKNOWN#" << endl;
@@ -230,7 +233,11 @@ void Interpreter::Run() {
       SQLUpdate *st = new SQLUpdate(sql_vector_);
       api->Update(*st);
       delete st;
-    } break;
+    }
+    case 120: {
+      //JOIN FUNCTION
+    }
+    break;
     default:
       break;
     }

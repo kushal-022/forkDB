@@ -349,5 +349,9 @@ void MiniDBAPI::Update(SQLUpdate &st) {
   delete rm;
 }
 void MiniDBAPI::Join(SQLJoin &st){
+  
+  RecordManager *rm = new RecordManager(cm_, hdl_, curr_db_);
+  rm->Join(st);
+  
   //JOIN FUNCTION
 }

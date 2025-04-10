@@ -491,6 +491,99 @@ void RecordManager::Update(SQLUpdate &st) {
   hdl_->WriteToDisk();
 }
 
+//--------------------------------JOIN FUNCTION----------------------------------//
+void RecordManager::Join(SQLJoin &st) {
+  if (db_name_.empty()) {
+    throw NoDatabaseSelectedException();
+  }
+
+  // Retrieve the two tables involved in the join.
+  Table *tbl1 = cm_->GetDB(db_name_)->GetTable(st.tb_name1());
+  Table *tbl2 = cm_->GetDB(db_name_)->GetTable(st.tb_name2());
+  if (tbl1 == NULL || tbl2 == NULL) {
+    throw TableNotExistException();
+  }
+
+  // Identify the join columns based on the column names provided.
+  int colIndex1 = -1;
+  for (int i = 0; i < tbl1->GetAttributeNum(); ++i) {
+    if (tbl1->ats()[i].attr_name() == st.col_name1()) {
+      colIndex1 = i;
+      break;
+    }
+  }
+  int colIndex2 = -1;
+  for (int i = 0; i < tbl2->GetAttributeNum(); ++i) {
+    if (tbl2->ats()[i].attr_name() == st.col_name2()) {
+      colIndex2 = i;
+      break;
+    }
+  }
+  if (colIndex1 == -1 || colIndex2 == -1) {
+    cout<<"Join column not found in one of the tables.";
+    throw SyntaxErrorException();
+  }
+
+  vector<vector<TKey>> tkey_values;
+
+  // Match values and store the inner join in tkey_values.
+  int block1 = tbl1->first_block_num();
+  for (int b1 = 0; b1 < tbl1->block_count() && block1 != -1; ++b1) {
+    BlockInfo *bp1 = GetBlockInfo(tbl1, block1);
+    for (int r1 = 0; r1 < bp1->GetRecordCount(); ++r1) {
+      vector<TKey> rec1 = GetRecord(tbl1, block1, r1);
+      TKey key1 = rec1[colIndex1];
+
+      int block2 = tbl2->first_block_num();
+      for (int b2 = 0; b2 < tbl2->block_count() && block2 != -1; ++b2) {
+        BlockInfo *bp2 = GetBlockInfo(tbl2, block2);
+        for (int r2 = 0; r2 < bp2->GetRecordCount(); ++r2) {
+          vector<TKey> rec2 = GetRecord(tbl2, block2, r2);
+          TKey key2 = rec2[colIndex2];
+
+          if (key1 == key2) {
+            vector<TKey> joinRow;
+            // Add all columns from the first table.
+            for (int i = 0; i < rec1.size(); ++i) {
+              joinRow.push_back(rec1[i]);
+            }
+            // Add columns from the second table except the join column.
+            for (int i = 0; i < rec2.size(); ++i) {
+              if (i == colIndex2) continue;
+              joinRow.push_back(rec2[i]);
+            }
+            tkey_values.push_back(joinRow);
+          }
+        }
+        block2 = bp2->GetNextBlockNum();
+      }
+    }
+    block1 = bp1->GetNextBlockNum();
+  }
+
+  // Print the header. We print all columns from tbl1 and only the non-join column from tbl2.
+  for (int i = 0; i < tbl1->GetAttributeNum(); ++i) {
+    cout << setw(12) << left << tbl1->ats()[i].attr_name();
+  }
+  for (int i = 0; i < tbl2->GetAttributeNum(); ++i) {
+    if (i == colIndex2) continue; // Skip the duplicate join column.
+    cout << setw(12) << left << tbl2->ats()[i].attr_name();
+  }
+  cout << endl;
+
+  // Print all joined rows stored in tkey_values.
+  for (auto &row : tkey_values) {
+    for (auto &field : row) {
+      cout << setw(12) << left << field;
+    }
+    cout << endl;
+  }
+}
+
+
+
+//-------------------------------END OF JOIN FUNCTION---------------------------//
+
 
 std::vector<TKey> RecordManager::GetRecord(Table *tbl, int block_num,
                                            int offset) {

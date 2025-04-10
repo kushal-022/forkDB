@@ -24,6 +24,7 @@ public:
   void Select(SQLSelect &st);
   void Delete(SQLDelete &st);
   void Update(SQLUpdate &st);
+  void Join(SQLJoin &st);
 
   BlockInfo *GetBlockInfo(Table *tbl, int block_num);
   std::vector<TKey> GetRecord(Table *tbl, int block_num, int offset);

@@ -1,5 +1,4 @@
 #include "catalog_manager.h"
-#include "exceptions.h"
 #include <fstream>
 #include <boost/filesystem.hpp>
 
@@ -46,11 +45,6 @@ void CatalogManager::WriteArchiveFile() {
 }
 
 void CatalogManager::CreateDatabase(std::string dbname) {
-  for (unsigned int i = 0; i < dbs_.size(); ++i) {
-    if (dbs_[i].db_name() == dbname) {
-      throw DatabaseNotExistException();
-    }
-  }
   dbs_.push_back(Database(dbname));
 }
 
@@ -71,11 +65,6 @@ void Database::CreateTable(SQLCreateTable &st) {
   int record_length = 0;
   Table tb;
   vector<Table>::iterator i;
-  for (i = tbs_.begin(); i != tbs_.end(); i++) {
-    if (i->tb_name() == st.tb_name()) {
-      throw TableAlreadyExistsException();
-    }
-  }
   for (int i = 0; i < st.attrs().size(); ++i) {
     tb.AddAttribute(st.attrs()[i]);
     record_length += st.attrs()[i].length();
@@ -93,7 +82,6 @@ void Database::DropTable(SQLDropTable &st) {
       return;
     }
   }
-  throw TableNotExistException();
 }
 
 void Database::DropIndex(SQLDropIndex &st) {

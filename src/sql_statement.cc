@@ -227,18 +227,18 @@ void SQLInsert::Parse(std::vector<std::string> sql_vector) {
   unsigned int pos = 1;
   bool is_attr = true;
 
-  if (to_lower_copy(sql_vector[pos]) != "into") {
+  if (sql_vector[pos] != "into") {
     throw SyntaxErrorException();
   }
   pos++;
   cout << "TABLE NAME: " << sql_vector[pos] << endl;
   tb_name_ = sql_vector[pos];
   pos++;
-  if (to_lower_copy(sql_vector[pos]) != "values") {
+  if (sql_vector[pos] != "values") {
     throw SyntaxErrorException();
   }
   pos++;
-  if (to_lower_copy(sql_vector[pos]) != "(") {
+  if (sql_vector[pos] != "(") {
     throw SyntaxErrorException();
   }
   pos++;
@@ -374,7 +374,7 @@ void SQLCreateIndex::Parse(std::vector<std::string> sql_vector) {
   index_name_ = sql_vector[pos];
   pos++;
 
-  if (to_lower_copy(sql_vector[pos]) != "on") {
+  if (sql_vector[pos] != "on") {
     throw SyntaxErrorException();
   }
   pos++;
@@ -383,7 +383,7 @@ void SQLCreateIndex::Parse(std::vector<std::string> sql_vector) {
   tb_name_ = sql_vector[pos];
   pos++;
 
-  if (to_lower_copy(sql_vector[pos]) != "(") {
+  if (sql_vector[pos] != "(") {
     throw SyntaxErrorException();
   }
   pos++;
@@ -392,7 +392,7 @@ void SQLCreateIndex::Parse(std::vector<std::string> sql_vector) {
   col_name_ = sql_vector[pos];
   pos++;
 
-  if (to_lower_copy(sql_vector[pos]) != ")") {
+  if (sql_vector[pos] != ")") {
     throw SyntaxErrorException();
   }
   pos++;

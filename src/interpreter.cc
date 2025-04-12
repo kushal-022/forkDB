@@ -36,6 +36,8 @@ vector<string> split(string str, string sep) {
 
 //Cleaning the SQL Statement inputted from the user and tokenizing it on the basis of plain spaces.
 void Interpreter::FormatSQL() {
+  std::transform(sql_statement_.begin(), sql_statement_.end(), sql_statement_.begin(),
+                     [](unsigned char c){ return std::tolower(c); });
   // remove newlines, tabs
   boost::regex reg("[\r\n\t]");
   // string newstr(" ");
@@ -74,7 +76,6 @@ void Interpreter::TellSQLType() {
     cout << "SQL TYPE: #EMPTY#" << endl;
     return;
   }
-  boost::algorithm::to_lower(sql_vector_[0]);
   if (sql_vector_[0] == "quit") {
     cout << "SQL TYPE: #QUIT#" << endl;
     sql_type_ = 10;
@@ -82,7 +83,6 @@ void Interpreter::TellSQLType() {
     cout << "SQL TYPE: #HELP#" << endl;
     sql_type_ = 20;
   } else if (sql_vector_[0] == "create") {
-    boost::algorithm::to_lower(sql_vector_[1]);
     if (sql_vector_[1] == "database") {
       cout << "SQL TYPE: #CREATE DATABASE#" << endl;
       sql_type_ = 30;
@@ -96,7 +96,6 @@ void Interpreter::TellSQLType() {
       sql_type_ = -1;
     }
   } else if (sql_vector_[0] == "show") {
-    boost::algorithm::to_lower(sql_vector_[1]);
     if (sql_vector_[1] == "databases") {
       cout << "SQL TYPE: #SHOW DATABASES#" << endl;
       sql_type_ = 40;
@@ -110,7 +109,6 @@ void Interpreter::TellSQLType() {
       sql_type_ = -1;
     }
   } else if (sql_vector_[0] == "drop") {
-    boost::algorithm::to_lower(sql_vector_[1]);
     if (sql_vector_[1] == "database") {
       cout << "SQL TYPE: #DROP DATABASE#" << endl;
       sql_type_ = 50;

@@ -16,15 +16,15 @@ std::ostream &operator<<(std::ostream &out, const TKey &object) {
   case 0: {
     int a;
     memcpy(&a, object.key_, object.length_);
-    cout << setw(9) << left << a;
+    cout << setw(12) << left << a;
   } break;
   case 1: {
     float a;
     memcpy(&a, object.key_, object.length_);
-    cout << setw(9) << left << a;
+    cout << setw(12) << left << a;
   } break;
   case 2: {
-    cout << setw(9) << left << object.key_;
+    cout << setw(12) << left << object.key_;
   } break;
   }
 
@@ -564,6 +564,8 @@ void SQLUpdate::Parse(std::vector<std::string> sql_vector) {
 }
 
 void SQLJoin::Parse(std::vector<std::string> sql_vector) {
+    for(auto it:sql_vector) cout<<it<<" ";
+    cout<<endl;
   sql_type_ = 120;
   unsigned int pos = 1;
   // SYNTAX : JOIN t1 AND t2 ON t1-att = t2-att

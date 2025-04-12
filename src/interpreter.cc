@@ -103,6 +103,9 @@ void Interpreter::TellSQLType() {
     } else if (sql_vector_[1] == "tables") {
       cout << "SQL TYPE: #SHOW TABLES#" << endl;
       sql_type_ = 41;
+    } else if (sql_vector_[1] == "table") {
+        cout << "SQL TYPE: #SHOW TABLE#" << endl;
+        sql_type_ = 42;
     } else {
       sql_type_ = -1;
     }
@@ -139,7 +142,7 @@ void Interpreter::TellSQLType() {
     cout << "SQL TYPE: #UPDATE#" << endl;
     sql_type_ = 110;
   } else if (sql_vector_[0] == "join") {
-    cout << "SQL TYPE: #UPDATE#" << endl;
+    cout << "SQL TYPE: #JOIN#" << endl;
     sql_type_ = 120;
   } else {
     sql_type_ = -1;
@@ -177,6 +180,14 @@ void Interpreter::Run() {
     } break;
     case 41: {
       api->ShowTables();
+    } break;
+    case 42: {
+        string tb_name = sql_vector_[2];
+        sql_vector_.clear();
+        sql_vector_ = {"select", "*", "from", tb_name};
+        SQLSelect *st = new SQLSelect(sql_vector_);
+        api->Select(*st);
+        delete st;
     } break;
     case 50: {
       SQLDropDatabase *st = new SQLDropDatabase(sql_vector_);
@@ -236,7 +247,8 @@ void Interpreter::Run() {
     }
     case 120: {
       SQLJoin *st = new SQLJoin(sql_vector_);
-      //JOIN FUNCTION
+        api->Join(*st);
+        delete st;
     }
     break;
     default:
